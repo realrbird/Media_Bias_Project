@@ -1,0 +1,12 @@
+*.TXT
+*.txt
+*.rds
+*.dta
+*.csv
+*.xlsx
+*.xls
+*.docx
+*.pdf
+*.tex
+*.DS_Store
+Articles/
