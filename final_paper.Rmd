@@ -1,0 +1,399 @@
+---
+title: "The Media as Ideological “Gatekeepers”? Findings of Minimal Issue Ownership Bias in Television News Coverage"
+author: "Robert Bird  -  Stony Brook University"
+date: "04/30/2018"
+output:
+  pdf_document:
+    keep_tex: true
+    include:
+      after_body: appendix.tex
+  html_document:
+    df_print: paged
+  citation_package: biblatex
+link-citations: yes
+fig_caption: yes
+bibliography: bibliography.bib
+header-includes:
+    - \usepackage{setspace}\onehalfspacing
+    - \usepackage{longtable}
+fontsize: 11pt
+---
+
+```{r general_stuff, include=F}
+library(tidyverse)
+library(readxl)
+library(knitr)
+library(stringr)
+library(kableExtra)
+library(purrr)
+library(ggthemes)
+
+knitr::opts_chunk$set(fig.pos = 'h')
+
+tables_file <- paste0("~/Google Drive/Projects/Dissertation/", 
+                      "Media_Bias_Project/Tables.xlsx")
+
+
+format_percentages <- function(avec) {
+  
+  if (is.character(avec)) {
+    avec <- ifelse(is.na(avec), ' - ', avec)
+    return(avec)
+  }
+  
+  format_percent <- function(elem) {
+    if (is.na(elem)) {
+      return(' - ')
+    }
+    if (abs(elem) <= 1 & abs(elem) >= 0) {
+      elem <- as.character(round(elem * 100, digits = 2)) 
+      if (str_detect(elem, '^.?\\d{1,2}\\.\\d{1}$')) {
+        elem <- paste0(elem, '0%')
+        return(elem)
+      }
+      if (str_detect(elem, '^.?\\d{1,3}$')) {
+        elem <- paste0(elem, '.00%')
+        return(elem)
+      }
+      if (str_detect(elem, '^.?\\d{1,2}\\.\\d{2}$')) {
+        elem <- paste0(elem, '%')
+        return(elem)
+      }
+    }
+    as.character(elem)
+  }
+  
+  if (!is.numeric(avec)) {
+    return(avec)
+  }
+  
+  avec <- map_chr(avec, format_percent)
+  
+}
+
+```
+
+\ 
+
+*Issue ownership theory argues that candidates and parties focus on issues they own, which provides them with a competitive advantage. In addition, previous research has shown that: (1) the media also engage in partisan bias, and (2) the media can largely determine which issues are salient among the public. Building on these two lines of research, this paper explores the extent to which the media—like candidates and parties—engage in issue ownership bias, arguing that certain media outlets may disproportionately cover issues depending on which political party they support. To address this question, this paper uses a supervised machine learning model to analyze over one million television transcripts from ABC News, CBS News, NBC News, Fox News, MSNBC, and CNN. I find that the traditional news networks (ABC News, CBS News, and NBC News) cover issues owned by Democrats far more often compared to the political news networks (MSNBC, CNN, and Fox News). This is most likely due to the structural differences between these network types rather than any ideological motivation. Within each network type I find minimal to no differences between the networks in terms of which issues they cover. This may be due to the finding that networks are highly reactive to events, limiting their ability to function as “gatekeepers,” strategically selecting news to benefit their favored party.*
+
+\newpage
+
+# Introduction
+
+Media bias is probably the most widely held belief about the media [@schiffer2017evaluating]. The percentage of people believing that the media tend to “favor one side” has been steadily increasing from 53% in 1985 to 77% in 2011 [@kohut2011press]. Similarly, public trust in the media has sharply decreased over the past 40 years [@ladd2011americans].  This idea of the media being biased is not only prevalent among the electorate, but also among academics [@groseclose2005measure; @groseclose2011left; @larcinese2011partisan; @lowry2008network].
+
+Media bias can have important implications for how people view and participate in the political world, since most people get the vast majority of their political information from the media [@lippmann1922public; @zaller1992nature]. While the media are not very good at telling people what to think, they are extremely successful at telling people what to think about [@cohen1963t; @iyengar1982experimental; @mccombs1972agenda]. The media are skilled at setting the agenda, i.e., deciding which issues are important and which issues people should care about [@iyengar1982experimental; @mccombs1972agenda; @wanta2004agenda]. Given this ability, the media are in a unique position where if they so desired, they could sway the public to care about issues which a certain political party is viewed more favorably on, thus giving that party a competitive advantage.
+
+Given that media bias has such important implications, it is no surprise that much academic research has been devoted to the topic [see Groeling -@groeling2013media for a review]. Though there are various types of media bias, a more recent charge is that of partisan bias, which Groeling [-@groeling2013media] defines as “significantly distorted portrayal of reality that systematically and disproportionately favors one party over another.” Studies on partisan media bias have found varied results with many claiming rampant bias [@groseclose2011left; @larcinese2011partisan; @morris2010cable], while others claiming no partisan bias at all [@schiffer2017evaluating; @hofstetter1976bias; @d2000media; @robinson1983over; @soroka2012gatekeeping; @puglisi2015balanced]. These studies examined various forms of partisan bias, including gatekeeping bias, coverage bias, tone bias, and quality bias. This piece adds to that literature by examining another type of partisan bias that has received somewhat less attention: what I call *issue ownership bias*. 
+
+*Issue ownership bias* integrates the theories of *agenda setting* and *issue ownership*. *Agenda setting theory* posits that media outlets can guide the public's agenda by influencing which issues they should care about, and thus both making those issues most salient [@cohen1963t; @iyengar1982experimental; @mccombs1972agenda] and affecting how political figures, including the president, are viewed [@iyengar1982experimental; @krosnick1990altering]. *Issue ownership theory* posits that the Democratic and Republican Parties differ in their ability to handle certain issues—or at least people perceive this to be the case [@petrocik1996issue; @budge1983explaining; @egan2013partisan]. Research in this area has shown that increased media attention to owned issues both increases support for the issue owners generally, as well as for that party in elections [@ansolabehere1994riding; @beyer2014election; @boomgaarden2007explaining; @walgrave2004making].
+
+Agenda setting and issue ownership allow the media to exert bias by disproportionately covering issues that their favored party owns. While issue ownership has traditionally been researched with respect to political candidates, the theory can be applied to any entity that has a partisan preference, which the media have been shown to possess [@ho2008measuring; @larcinese2011partisan; @lowry2008network; @morris2010cable; Groeling -@groeling2008s; @groseclose2005measure; @groseclose2011left]. If the media disproportionately choose stories that their favored party owns in order to set the agenda and thus advantage said party, this would adhere to Groeling’s [-@groeling2013media] definition of partisan bias. As Puglisi [-@puglisi2011being] states “It is natural to ask whether a newspaper or a TV news broadcast systematically changes its coverage of issues…by tilting it towards topics over which a given political party is perceived as more capable by the majority of citizens. This would be consistent with the said newspaper being partisan in favor of that party.”
+
+This piece investigates the extent to which television networks engage in this *issue ownership bias*—that is, media outlets systematically covering issues their favored party owns in order to set the agenda in favor of their preferred party. While we lack full understanding of this type of media bias, this paper is not the first to investigate the phenomenon. Most notably, Puglisi [-@puglisi2011being] found that *The New York Times* favored Democratic issues during elections when the incumbent president was a Republican. I extend this work by investigating this same bias but instead among television networks utilizing a dataset of over one million broadcast transcripts.
+
+In sum, I find very little evidence of issue ownership bias among television news outlets. Instead, I find that political news networks differ very little from each other in terms of the issues they cover—a finding that should lead us to reevaluate our view of news outlets as ideological “gatekeepers.” These minimal differences in issue coverage could be due to structural issues, as political news networks are expected to react to world events, leaving little room for ideological slant (at least in terms of issue ownership). Interestingly, a trend that *does* emerge is traditional news networks’ greater coverage of Democratically owned issues in comparison to political news networks’. This finding is also likely due to structural differences—while traditional news networks have a limited amount of time to discuss politics in the evening news, political news networks are expected to cover politics virtually *all day*, leaving little choice on which issues to cover and which to ignore. These structural differences have likely led to the minimal findings of issue ownership bias. Instead, it seems the political news networks are constrained by external events and structural forces, leaving little room for ideological bias.
+
+# Background Literature
+
+### *Issue Ownership*
+
+Issue ownership theory posits that the public believes a certain political party is more competent in—and thus better able to handle—specific policy issues [@petrocik1996issue]. For example, Republicans are typically thought to better handle foreign affairs and domestic security issues, while Democrats are seen as better at handling issues such as health care policy and social security [@egan2013partisan]. When a party’s owned issues are salient, that party is seen as more competent to lead and thus receives greater support and electoral advantages [@thesen2017priming; @ansolabehere1994riding; @petrocik1996issue; @budge1983explaining].
+
+Research on issue ownership has been steadily increasing [@lefevere2015introduction], and one of the most notable contributions has been that of Patrick Egan’s "Partisan Priorities" [-@egan2013partisan]. Egan outlines seventeen “consensus issues” which have been owned by one party or another from the 1970’s through 2010. He defines a consensus issue as that which has broad national consensus regarding the ultimate goals associated with it. For example, we all want better health care, security, and education with lower levels of poverty and crime. Compare this to issues such as abortion where there is a clear partisan division—a party cannot “own” abortion because there is no consensus on the issue. A party can, though, “own” foreign affairs because there is general agreement about the goals in line with foreign affairs.
+
+While both parties agree with the *goals* of consensus issues, they differ in three other regards. First, parties can disagree about which consensus issues should be priorities. Second, they can disagree about how well the government has performed in pursuit of these goals. And third, they can disagree about the means of achieving these goals. Through his extensive analysis, Egan finds that Republicans own the issues of "domestic security," "military," "immigration," "inflation," "crime," "foreign affairs" and "taxes" (in order of strength of ownership). Democrats own the issues of "poverty," "environment," "social security," "health care," "jobs," "education," and "energy" [also in order of strength of ownership; [see Egan -@egan2013partisan for a review]. The issues of "trade," "deficit," and "economy" have no ownership association on average, though all three tend to slightly favor Republicans, but this is not statistically significant [Egan -@egan2013partisan p. 67].
+
+While issue ownership theory is prevalent in the political science literature, its association with media bias is limited. A notable exception is the work of Riccardo Puglisi [-@puglisi2011being] who examined 38,470 New York Times articles published during presidential elections from 1946-1997. Puglisi found that the New York Times covered more Democratically-owned issues during presidential elections when the incumbent was a Republican. I add to this research in a number of ways. First, instead of journal articles, I examine television news from multiple sources rather than a single source, including political news networks (MSNBC, CNN, and Fox News) and traditional news networks (ABC News, CBS News, and NBC News). Second, I extend Puglisi’s time frame by analyzing these news sources during a time of high polarization, from 2000 to 2016. Third, I utilize a large data set of over 1 million transcripts, employing more recent machine learning models to classify transcripts into appropriate topics rather than using a third party pre-classified source. Finally, where Puglisi used the issues of "civil rights," "health care," "labor," and "social welfare," I look at a wider variety of issues which now have a more solid foundation in the issue ownership literature thanks to the work of Egan [-@egan2013partisan], among others. Given this, the findings of this paper should add significant value to the prior work of scholars such as Puglisi as well as give us a better understanding of how issue ownership could play a role in media bias.
+
+### *Media Bias*
+
+Media bias has been the subject of much investigation by political scientists and communication scholars [see Groeling -@groeling2013media; Schiffer -@schiffer2017evaluating for a review]. This literature has aimed to understand the many facets of media bias—not only its extent, but also the motivation behind media bias. Given that this piece suggests media outlets favor issues that advantage their preferred party, it is natural to ask why media outlets would *want* to favor one party or another. Mullainathan and Shleifer [-@mullainathan2005market] suggest that viewers hold beliefs they would like to see confirmed by news providers, a sentiment strongly supported in motivated reasoning and partisan media bias literature [@leon1957theory; @lodge2013rationalizing; @taber2006motivated; @strickland2011motivated; @iyengar2009red]. Thus, media providers slant news to provide this product to their consumers. As the saying goes, "Give the people what they want." This idea is supported by further research finding that media content matches the ideological makeup of the market [@strickland2011motivated].
+
+Strikingly, though, there is a lack of consensus among scholars on the extent to which the media partakes in partisan bias. While some have shown rampant partisan bias [@groseclose2005measure; @groseclose2011left; @larcinese2011partisan; @lowry2008network; Groeling -@groeling2008s], others show quite the opposite [@schiffer2017evaluating; @hofstetter1976bias; @d2000media; @robinson1983over; @puglisi2015balanced]. As Groeling [-@groeling2013media] notes, these divergent finding may be due to the fact that media bias is inherently difficult to study. He points out two main roadblocks in media bias research—the first being subjectivity, or, as Groeling [-@groeling2008s] explains “identical stories are often perceived as having diametrically opposed biases depending on who is viewing them.” Second, and perhaps more concerning, is the problem of the unobserved population. Since we cannot know the population of potential stories from which media outlets choose, we cannot claim media outlets’ selection of these stories is biased [@hofstetter1976bias; @groeling1998network].
+
+In addition to these methodological issues, there are various ways to *define* media bias—making a coherent story about media bias even more difficult. As Schiffer [-@schiffer2017evaluating] explains, there tend to be four main types of media bias. *Gatekeeping Bias* posits that one side’s issues receive more or less coverage than they deserve. Scandals are probably the best example of gatekeeping bias, in that if there is a Republican scandal, Republican outlets will tend to avoid the story, while Democratic outlets will cover it arguably too much. *Coverage Bias*, which is similar to gatekeeping, asserts that one *side* of an issue receives more or less coverage than the other. Contrary to gatekeeping, though, coverage bias deal with issues in which both sides desire public discourse. The third type of media bias is *Tone Bias*, which claims that one side receives more positive or negative coverage than the other side. Obviously, charges of tone bias are rampant during elections. Lastly, *Quality Bias* deals with the truthfulness of news coverage—where outlets include factually questionable information that favors one side and distorts the other.
+
+This piece focuses on a different type of partisan media bias which receives somewhat less attention—that of issue ownership bias. In order to assuage some of the methodological problems explained previously, this piece incorporates recommendations from previous researchers. For example, instead of testing bias against some absolute baseline of reality [@schiffer2017evaluating], a relative baseline is used where networks are compared to *one another*. As Hofstetter [-@hofstetter1976bias] notes “assessments [of bias] should be “relative” rather than “absolute”…characterizing the slant of news outlets in relation to one another rather than to a balance (or reality) baseline” [@hofstetter1976bias; @schiffer2017evaluating].
+
+In addition, I adhere to the "IBE" (Ideal Baseline Evidence) framework set forth by Schiffer [-@schiffer2017evaluating]. This framework proposes that partisan bias charges should confront three tenets: 1) these charges must assume that news should live up to an ideal; 2) this ideal should be defined in the particular context; and 3) one must show a deviation from that ideal in that context. With respect to this piece, I assert that: 1) news outlets should provide the public with news that is relevant to them based on the important issues of the day; 2) this means that media outlets should cover issues in similar proportion to each other; and 3) any evidence that certain networks cover issues disproportionately would constitute bias. 
+
+Using relative baseline comparisons and adhering to the IBE framework provides me with a solid structure for investigating media bias in terms of issue ownership. The remainder of the paper proceeds as follows. First, I describe the dataset used for analysis. Next, I describe the model used to categorize transcripts into one of the 17 consensus issues described earlier. I then show that a robustness check that verifies that the model indeed worked correctly. Finally, I present the results and then discuss the implications of these findings.
+
+# Data & Methods
+
+### Data
+
+To discern whether or not television news outlets are engaging in issue ownership bias, over one million television transcripts via Lexis Nexis were analyzed. This comprises all television transcripts which Lexis Nexis had on file for Fox News, MSNBC, CNN, ABC News, NBC News, and CBS News from January of 2000 to August of 2016. Table \ref{tab:table1} displays the counts and percentages of transcripts for each network. 
+
+```{r table1, echo=F, message=F, error=F, warning=F, results='asis'}
+df <- read_excel(tables_file, sheet = 'Table 1', col_types = 'text')
+
+df <- df %>%
+  dplyr::select(1:3) %>%
+  dplyr::mutate(Frequency = as.numeric(Frequency), Percent = as.numeric(Percent),
+                temp1 = ' ', temp2 = ' ', temp3 = ' ', temp4 = ' ', 
+                temp5 = ' ', temp6 = ' ') %>%
+  dplyr::mutate(Percent = Percent / 100) %>%
+  purrr::map_df(format_percentages) %>%
+  dplyr::select(temp1, temp2, Network, temp3, Frequency, temp4,
+                Percent, temp5, temp6)
+colnames(df) <- c("", " ", "Network", "  ", "Frequency", "   ", "Percent",
+                  "    ", '     ')
+knitr::kable(df, align = 'c', format = 'latex', booktabs = T,
+                        caption = '\\label{tab:table1}Count of Articles by Network') %>%
+  kable_styling(latex_options = c('hold_position'))
+```
+
+Each transcript in the dataset can be thought of as covering one or more issues—either political or non-political. To analyze issue ownership bias, each transcript was coded as belonging to one or more of the 17 consensus issues or as “other” (i.e., either nonpolitical or not fitting into one of the 17 consensus issues). If a transcript covered more than one issue, this was noted by splitting the probability between the issues. For example, a transcript that discussed immigration half of the time and environment the other half of the time would be coded .5 immigration and .5 environment. The issues and their partisan association, or lack thereof (termed “neutral”) can be seen in Table \ref{tab:table2}. 
+
+```{r table2, echo=F, message=F, error=F, warning=F, results='asis'}
+df <- read_excel(tables_file, sheet = "Table 2") %>%
+  dplyr::slice(3:20) %>%
+  dplyr::select(-c(ABC, CBS, CNN, FOX, MSNBC, NBC)) %>%
+  dplyr::rename_(`Owned By` = "Owned_By",
+                 `Republican Advantage` = "Republican_Ownership_Advantage") %>%
+  purrr::map_df(format_percentages) %>%
+  dplyr::mutate(Issue = str_replace(Issue, '_', ' ')) %>%
+  dplyr::mutate(Issue = str_to_title(Issue))
+
+knitr::kable(df, align = 'c', 
+             caption = "\\label{tab:table2}List of Consensus Issues", 
+             format = 'latex', booktabs = T) %>%
+  kable_styling(latex_options = c('hold_position')) %>%
+  add_footnote(label = "'Owned By' & 'Republican Advantage' for each issue come from Egan(2013)", 
+               notation = 'number')
+```
+
+In line with the IBE Framework [@schiffer2017evaluating] set forth earlier, I set the ideal as news networks providing the public with news that is relevant to them based on the important issues of the day. In doing so, media outlets should cover issues in similar proportion to each other. If news organizations are not engaging in issue ownership bias, then all networks should cover issues in the same proportion. For example, we should see that Fox News covers poverty just as much as MSNBC or CNN covers poverty, and the same should be true for any other issue or network. However, if we see that MSNBC covers poverty significantly more often than other networks, we can say this network is engaging in bias by attempting to set the agenda toward their favored party via issue ownership bias.  
+
+### *Supervised Learning*
+
+To analyze the extent of issue ownership bias in television news, the transcripts needed to be coded by topic (i.e., by consensus issue). Given the large number of transcripts (over one million)—making hand coding virtually impossible—I utilize a combination of human coding and a supervised machine learning model called elastic net regression to code each transcript’s probability of belonging to a certain topic. This method specifically, as well as machine learning models generally, are well documented methods for analysis of textual data in multiple disciplines, including in political science [@grimmer2013text; @friedman2010regularization; @zou2005regularization].
+
+Supervised learning is a machine learning method in which a subset of data with known values (which, here, are topics coded by an individual) of each variable is modeled. This is referred to as the “training set.” A model is trained on this subset of the data where the values of all of the variables are known. Once trained, this model is then applied to a different set of data where the dependent variable (which topic a transcript belongs to) is unknown. This data is referred to as the “testing set.” The purpose is to classify each transcript in the testing set into topics by relying on the model from the training set. This is similar to a regression model in that a regression model can be used to predict values from the data.
+
+The training set consists of 5260 text snippets, each up to 400 words in length, which were manually coded by a person. These texts were randomly selected, and then grouped by network, year, and week. To increase efficiency, a random selection of 400 consecutive words was then chosen. If the transcript was less than 400 words, the entire transcript was coded. From there, the texts were coded as belonging to one of the 17 consensus issues described above. If the text did not belong to one of the 17 issues, or comprised multiple issues with no issue being dominant, it was coded as "other."
+
+Following the human coding of the training set, the elastic net regression model was fit to the training data and then used to predict the probability of each of the remaining transcripts as belonging to any given topic or issue. Elastic net is a generalized linear model which uses penalized maximum likelihood estimation. The problem that elastic net solves is that we have far too many independent variables in our regression model. The dataset is a matrix where each row is a transcript and each column is a word, the values of which are how many times that word occurs in each transcript. Since every independent variable is a word, we would be trying to estimate a model with potentially over one-hundred thousand predictors—using the elastic net regression accounts for this. 
+
+To do so, elastic net regression helps us discern words that are relevant to the model from words that are not relevant to the model (i.e., whose $\beta$ coefficient will be close to zero). Since the latter are the vast majority of words used, we want to eliminate these and only include words that predict topics well. Elastic net thus penalizes each $\beta$ coefficient for each predictor, forcing the slope coefficient toward zero, and allowing for the creation of a model with good predictive accuracy.
+
+In order test that the model coded the transcripts correctly, a check was conducted. This check classified each transcript with a probability of belonging to each of the consensus issues seen in Table \ref{tab:table2}. If the model is classifying transcripts correctly, then we should see that as events happen in the real world, coverage of issues related to those events increases. For example, we should see that when 9/11 happened, the percentage of news classified as "Domestic Security" increased. If these spikes do not occur, then it would be difficult to trust the model’s classification scheme (for a full list of each event and its corresponding consensus issue, see Appendix).
+
+To see if these events sparked corresponding increased coverage, a variable is created for each event. This variable is coded zero until the date of the event and one for the date of the event. The value then decreases non-monotonically such that after two weeks it is approximately 50 percent, at 60 days it is almost zero, and after that it is zero. In other words, the variable is one in which there is no effect of the event prior to the event, the largest effect of the event when the event occurs, with that effect diminishing over time. Figure \ref{fig:figure1} shows the effect of each event on its corresponding issue (See Appendix for list of each event and corresponding issue).
+
+
+
+```{r figure1, echo=F, message=F, error=F, warning=F, fig.width=8, fig.height=8, fig.cap='\\label{fig:figure1}Effect of World Events on Issue Coverage'}
+df <- read_excel(tables_file, sheet = "Figure 1 Data") %>%
+  dplyr::filter(effect == "All Networks") %>%
+  dplyr::select(-effect)
+
+df %>% 
+  ggplot(aes(x = reorder(event, estimate), y = estimate, color = owner)) +
+  geom_point() +
+  geom_linerange(aes(ymin = ll, ymax = ul)) +
+  ggtitle('Effect of World Events on Issue Coverage') +
+  labs(x = "Event", y = 'Marginal Effect',
+       caption = "* The regression that produced this graph controlled for Network (not shown)") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5,
+                                  face = 'bold',
+                                  margin = margin(t = 10, r = 0, 
+                                                  b = 30, l = 0)),
+        axis.title.y = element_text(margin = margin(t = 0, r = 20, 
+                                                    b = 0, l = 10)),
+        axis.title.x = element_text(margin = margin(t = 20, r = 0, 
+                                                    b = 10, l = 0)),
+        legend.position = c(0.5, 0.5),
+        legend.title = element_blank()) +
+  coord_flip() + 
+  expand_limits() +
+  scale_color_manual(values = c("Democrat" = "blue", "Neutral" = "green", 
+                                "Republican" = "Red")) 
+```
+
+Figure \ref{fig:figure1} demonstrates that the model is working correctly. For almost all events, and especially for major events, we can see that the percentage of issue coverage significantly increases when corresponding events occur. For example, after 9/11, transcripts coded as “Domestic Security” increase, and after the Iraq War began, transcripts coded as “Military” increase. This is true for almost all issues, and the increases are statistically significant for a vast majority of the events. Thus, we see strong evidence that the supervised learning model has classified transcripts correctly.
+
+# Results
+
+### Issue Ownership Bias *within* Network Types
+
+Figure \ref{fig:figure1} shows that the elastic net model is categorizing transcripts into correct issues. For each transcript, the model calculates the probability of belonging to each consensus issue as well as to the "other" category. If we would like to know the total coverage given to Democratic issues for each network, for example, we can simply sum the probabilities of each of the individual Democratic issues (e.g., health care, the environment, poverty) and then calculate the mean by network. This process can be repeated for the Republican issues, neutral issues, and the "other" category. Table \ref{tab:table3} shows the percentage of each coverage type (Democratically-owned issues, Republican-owned issues, neutral issues, and the "other" issue) for each network.
+
+
+```{r table3, echo=F, message=F, error=F, warning=F}
+df <- read_excel(tables_file, sheet = 'Table 3') %>%
+  purrr::map_df(format_percentages)
+
+knitr::kable(df, align = 'c', 
+             caption = "\\label{tab:table3}Coverage of Summed Issues by Network", 
+             format = 'latex', booktabs = T) 
+```
+
+Table \ref{tab:table3} provides the first indication that issue ownership bias is not prevalent among networks. If networks were biased, we might expect MSNBC to cover mainly Democratic owned issues and Fox to cover mainly Republican owned issues. This is not the case, as the percentages are quite similar to one another—in fact, MSNBC covers a larger portion of Republican owned issues than Fox does.
+
+One might wonder if this is the case because MSNBC simply covers more political news than other networks. This concern can be alleviated by only looking at what percentage of all political issue coverage^[By “Political Issue” or “Political Issues” I am referring the 14 consensus issues described throughout this paper that are either owned by the democratic or republican party according to Egan [-@egan2013partisan]] is devoted to Republican owned issues (i.e., eliminating the “other” category from the denominator). To calculate this, the percentage of Republican-owned issue coverage is divided by the percentage of Republican-owned issue coverage plus the percentage of Democratically-owned issue coverage (i.e., the total coverage of political issues). This calculation will be referred to from this point forward as the “Republican Percentage.” The “Democratic Percentage” is simply one minus the Republican issue percentage. 
+
+Table \ref{tab:table4} shows the Republican Percentage for each network, as well as each issue, and the percentage coverage of each issue by network. The percentages were calculated for each transcript via the elastic net model described above. The table again suggests that political news networks and traditional news networks do not appear to be engaging in issue ownership bias. The difference between Fox and CNN in terms of Republican Percentage is almost non-existent, as is the difference for ABC and CBS. Even the difference between MSNBC and Fox, which is statistically significant, is quite small at less than 2%. If networks were engaging in issue ownership bias, the proportion of Republican and Democratic percentages would change by network—but this is not what I find.
+
+
+```{r table4, echo=F, message=F, error=F, warning=F}
+df <- read_excel(tables_file, sheet = "Table 2") %>%
+  dplyr::rename_(`Owned By` = "Owned_By",
+                 `Republican Advantage` = "Republican_Ownership_Advantage") %>%
+  purrr::map_df(format_percentages) %>%
+  dplyr::mutate(Issue = str_replace(Issue, '_', ' ')) %>%
+  dplyr::mutate(Issue = str_to_title(Issue))
+
+knitr::kable(df, align = 'c', 
+             caption = "\\label{tab:table4}Coverage of each Consensus Issue by Network", 
+             format = 'latex', booktabs = T) %>%
+  kable_styling(latex_options = c("scale_down", 'HOLD_position')) %>%
+  add_footnote(label = "'Owned By' & 'Republican Advantage' for each issue comes from Egan(2013)", 
+               notation = 'alphabet')
+```
+
+Since other factors may be contributing to which stories are chosen by news networks, I also then control for various factors by estimating a linear model shown in Table \ref{tab:table5}. In the first model, standard errors are clustered by date. In addition, the time slot of the transcript (i.e., overnight, morning, afternoon, and evening), day of the week of the transcript (e.g., Monday, Tuesday), and the events listed in Figure \ref{fig:figure1} are included as controls (for full set of controls, see Appendix). In the second model, in addition to standard errors clustered by date, I include fixed effects to control for any potential omitted variables. For these analyses, the dependent variable is the Republican percentage in the transcript, and the independent variable of interest is network that aired that transcript. 
+
+
+```{r table5, echo=F, message=F, error=F, warning=F}
+df <- read_excel(tables_file, sheet = "Table 5") %>%
+  dplyr::select(starts_with('coef')) %>%
+  dplyr::mutate(temp1 = '  ') %>%
+  dplyr::select(coef_ivs, coef_cse, temp1, coef_csefe) %>%
+  dplyr::slice(1:12) %>%
+  dplyr::mutate(coef_ivs = ifelse(is.na(coef_ivs), '  ', coef_ivs))
+colnames(df) <- c(' ', 'Clustered Standard Errors','  ', 
+                  'Clustered Standard Errors with Fixed Effects')
+  
+knitr::kable(df, align = 'c', 
+             caption = "\\label{tab:table5}Effect of Each Network on Republican Percentage", 
+             format = 'latex', booktabs = T) %>%
+  kable_styling(latex_options = c('HOLD_position')) %>%
+  add_footnote(label = c("* p < .01, ** p < .05, *** p < .01",
+                         "Dependent Varaible is 'Republican Percentage'",
+                         'Standard Errors clusted by the day the transcript aired in parentheses',
+                         "Fixed Effects are the specific day the transcript aired",
+                         "Control variables not shown here, see Appendix for full table"), notation = 'alphabet') %>%
+  add_header_above(header = c(' ' = 1, 'Model' = 3), bold = T)
+```
+
+The results largely replicate the tables shown previously and demonstrate little difference in issue coverage. There is little to no difference between Fox News and CNN, and where there is a difference it is not robust across models. Secondly, MSNBC is consistently shown to be to the left of Fox News and CNN across models. While this result is statistically significant, the effect size is extremely small.
+
+Table \ref{tab:table5} shows the effect of each network, compared only with Fox News as the reference category. Figure \ref{fig:figure2} displays the network contrasts from the linear regression model presented in Table \ref{tab:table5}—these contrasts represent the effect of each network compared to each other on Republican percentage. The figure again shows that MSNBC is to the left of Fox News and CNN across models, though the difference is quite small. There is no statistically significant difference between CNN and Fox News across models. This is again evidence that compared to one another, political news networks do not seem to be engaging in issue ownership bias.
+
+
+```{r figure2, echo=F, message=F, error=F, warning=F, fig.width=8, fig.height=8, fig.cap='\\label{fig:figure2}Comparisons of the Effect of Network on Republican Percentage'}
+df <- read_excel(tables_file, sheet = "Figure 2 Data") %>%
+  dplyr::select(starts_with('contrast')) %>%
+  dplyr::slice(1:30) %>%
+  dplyr::rename(Model = contrast_model) 
+
+df %>%
+  ggplot(aes(reorder(contrast, contrast_est), contrast_est)) +
+  geom_point() +
+  geom_linerange(aes(ymin = contrast_ll, ymax = contrast_ul)) +
+  labs(x = 'Network Contrast', y = "Marginal Effect from Model",
+       title = 'Comparisons of the Effect of Network on Republican Percentage',
+       caption = '* Controls variables included but not shown, see Appendix for full table') +
+  geom_hline(yintercept = 0, color = 'red', linetype = 'dashed') +
+  theme_classic() + 
+  theme(plot.title = element_text(hjust = 0.5,
+                                  face = 'bold',
+                                  margin = margin(t = 10, r = 0, 
+                                                  b = 30, l = 0)),
+        axis.title.y = element_text(margin = margin(t = 0, r = 20, 
+                                                    b = 0, l = 10)),
+        axis.title.x = element_text(margin = margin(t = 20, r = 0, 
+                                                    b = 10, l = 0)),
+        legend.position = c(0.8, 0.8)) + 
+    facet_wrap(~Model, nrow = 1) + 
+  coord_flip()
+```
+
+Among traditional news networks, we do not see much difference across models. CBS is more Democratic than ABC in the second model but not the first, and it is more Republican than NBC in the first model with no significant difference in the second model. While NBC is to the left of ABC in both models, ABC shows no statistical difference from CBS in some models, and CBS shows no significant difference from NBC in other models. Taken together, there is no consistent empirical support for the idea that traditional news networks are engaging in issue ownership bias.
+
+### Issue Ownership Bias *betweeen* Network Types
+
+As Table \ref{tab:table5} and Figure \ref{fig:figure2} show, all traditional news networks cover more Democratically-owned issues compared to all political news networks. This indicates that traditional news networks lean to the left in terms of their issue coverage compared to political news networks. This result is robust across models, which may initially indicate that traditional news networks are far more Democratic than political news networks. However, this may simply be due to structural differences between network types rather than ideological bias. If this disparity were ideologically driven we would need to believe that ABC, CBS, and NBC are all far more liberal than MSNBC, which is thought to be one of the most liberal leaning news organizations [@levendusky2013partisan; @terwilleger2010bias; @holtzman2011exploring]. In addition, ABC, CBS, and NBC would be ideologically biased to the same extent, as there is almost no difference between them in terms of Republican Percentage.
+
+There are, though, structural differences between traditional news and political news networks. For example, traditional news networks devote far less time to political topics (see \ref{tab:table3}), which comes as no surprise since these networks also cover sports, celebrities, and other lifestyle topics. In addition, traditional news networks usually have an evening news show where they discuss a vast array of topics squeezed into a 30-minute or one-hour segment. By contrast, political news networks consistently air very similar—if not the same—stories all day long. Since political news is more likely to be connected to Republican owned issues (discussed below), it is not surprising that given these structural differences, political news networks all have a higher Republican Percentage than all the traditional news networks.
+
+If traditional news networks are covering political issues less often due to their format rather than some ideological bias, then this should be detectable in the data. We should see that traditional news networks are less reactive to world events. This is because due to their format, they need to cover non-political events, and similarly have much more limited time to discuss these political events. If traditional news networks are as reactive to events as the political news networks, then ideology might be what is driving this difference. 
+
+Figure \ref{fig:figure3} replicates Figure \ref{fig:figure1}, and demonstrates that when events happen, coverage of issues related to those events increases. In other words, networks are reactive to world events. Figure \ref{fig:figure3} then splits the graph by whether the network is a traditional news network or a political news network. The result is clear: traditional news networks are far less reactive to events than political news networks, suggesting that differences in issue coverage between traditional and political news networks can be attributed to structural differences rather than ideological motivations.
+
+
+```{r figure3, echo=F, message=F, error=F, warning=F, fig.width=8, fig.height=8, fig.cap='\\label{fig:figure3}Effect of World Events on Related Issue Coverage by Network Type'}
+
+df <- read_excel(tables_file, sheet = "Figure 3 Data") 
+
+df %>% 
+  ggplot(aes(x = reorder(event, estimate), y = estimate, color = effect)) +
+  geom_point(position = position_dodge(.5)) +
+  geom_linerange(aes(ymin = ll, ymax = ul), position = position_dodge(.5)) +
+  ggtitle('Effect of World Events on Related Issue Coverage by Network Type') +
+  labs(x = "Event", y = 'Marginal Effect',
+       caption = " ") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5,
+                                  face = 'bold',
+                                  margin = margin(t = 10, r = 0, 
+                                                  b = 30, l = 0)),
+        axis.title.y = element_text(margin = margin(t = 0, r = 20, 
+                                                    b = 0, l = 10)),
+        axis.title.x = element_text(margin = margin(t = 20, r = 0, 
+                                                    b = 10, l = 0)),
+        legend.position = c(0.8, 0.7),
+        legend.title = element_blank()) +
+  expand_limits() +
+  coord_flip() +
+  scale_colour_colorblind()
+
+```
+
+The evidence suggests that the differences in issue coverage between traditional and political news networks is due to differences in format rather than any ideological bias. Taken together with the evidence that within network type there is little difference in issue coverage, it seems that ideological bias is not driving the coverage of specific issues. This is not to say that networks desire to slant the issues they cover, but rather that perhaps external events and structural factors dramatically inhibit their ability to do so.
+
+### News Networks as Ideological Gatekeepers?
+
+Figures \ref{fig:figure1} and \ref{fig:figure1} support the idea that networks are constrained by structural factors—that as events happen in the world, networks must cover them regardless of their political leanings, leaving little room for ideological slant. For example, MSNBC cannot choose to ignore the Iraq War, even though both domestic security and the military are Republican issues. Similarly, Fox News cannot ignore the BP oil spill or Obamacare, though the environment and health care are Democratic issues. Again, the graph shows that networks are not completely free to set their own agenda—they are constrained by real world events. If networks do have ideological slant and a desire to set the agenda, it seems that their ability to do so is heavily restricted. The arguably most liberal leaning network, MSNBC, devotes almost 80% of its political programming to Republican-owned issues.
+
+Much of the research of media bias insinuates that the media are "gatekeepers," [Groeling and Baum -@groeling2009journalists] deciding which stories to expose the public to. However, these results suggest that television news networks are much less biased than one would expect. Even if networks are ideologically motivated and desire setting the agenda, external forces appear to prevent this. These external and structural differences seem to create a media environment that overall is quite fair and balanced, at least with respect to issue coverage.
+
+In addition, the graphs show that issues that are perhaps more “newsworthy” are tied more to Republican issues (e.g., the military, domestic security) than to Democratic issues (e.g., health care, social security). Of the top 10 most influential events in Figure \ref{fig:figure1}, not one of them is related to an issue owned by the Democratic Party. Further, 8 of the bottom 10 influential events are related to an issue owned by the Democratic Party. Why might this be the case? The finding could be due to what journalists and news outlets consider newsworthy. As Schiffer [-@schiffer2017evaluating] notes, “Scholars and critics have identified myriad ‘news-judgement criteria’ (NJC) -– also known as ‘news values.’” These news values, he explains, “are the attributes of an event or phenomenon that make it more likely to earn a spot, or a more prominent spot, in an outlet’s limited news hole.” 
+
+For political issues, news values include negativity, dramatic arc, novelty, and simplicity, all of which are conceivably dominated by events related to Republican-owned issues. First, Republican issues are arguably more negative than Democratic issues. As the old saying goes, “if it bleeds it leads.” War (i.e., the military), terrorism (i.e., domestic security), and crime—all Republican issues—are far “bloodier,” and more negative, than climate change (i.e., the environment), education, and social security—all Democratic issues. Second, Republican-owned issues seem to fit the dramatic arc that is deemed newsworthy. We do not see, for example, many television shows about the inexorable demise of the planet due to climate change or the steady trend of poverty and wealth inequality. There is, however, no shortage of hit television shows like "24," "Homeland," "Band of Brothers," "CSI," and "Law and Order," which have engaging story arcs and are non-coincidentally related to the military, terrorism, and/or crime. 
+
+The third news value is novelty—after all, the word “new” is in “news.” There is an old newsroom adage that, “if a dog bites a man that’s not news, if a man bites a dog, that’s news.” There is not much novelty to a steadily declining environment, the mundanity of the education system, or the fact that social security still exists. By perhaps some stroke of bad luck, these are all issues owned by the Democratic Party. Building walls to curb illegal immigration, the occurrence of terrorist attacks, and war—all issues owned by the Republican Party—break the mundanity by being, simply, *new*.
+
+Lastly, the news values simplicity. Arguably, events that have a “bad guy, good guy” frame—such as a terrorist attack or war—are simpler than, say, complex issues where the “bad guy” is unclear—such as a failing education system, climate change, and poverty. Based on these news values, it is not difficult to see why events related to Republican issues are, in general, covered more often than events related to Democratic issues. These news values suggest that, by their very nature, Republican issues are simply more newsworthy than Democratic issues. 
+
+This idea that republican issues are more newsworthy helps to explain why networks previously shown to have a liberal slant such as MSNBC and CNN devote almost 80% of their political issue coverage to Republican owned issues rather than Democratically owned issues. Simply put, they are restricted as to which issues they can cover, and to a large extent, they must follow newsworthy events (which tends to favor Republican issues) regardless of any ideological bias they may desire to exert. The evidence presented here, which shows that networks cover events as they happen due to structural forces, as well as the idea that these newsworthy events tend to favor Republican owned issues denote just how limited news organizations are in their ability to act as “gatekeepers” promoting a liberal agenda.
+
+# Conclusion
+
+This paper provides new evidence about the extent of partisan media bias among television news networks. A main finding is that the traditional news networks, ABC News, CBS News, and NBC news, cover issues owned by the Democrats in much higher proportion compared to the political news networks. This is most likely due to structural differences, rather than ideological motivations.
+
+This paper posited that news networks aim to cover issues owned by their favored party more often in order to set the agenda in their party’s favor, but instead I find that news networks are constrained in that they must cover newsworthy events to remain relevant. If they were not forced to cover these events, we may see this issue ownership bias take form. However, even if networks aimed to set the agenda, their ability to do so is limited—resulting in political news networks covering issues in very similar proportion to one another. This is in line with previous research which finds no net bias of the news media [@d2000media].
+
+In addition, while traditional news networks cover more Democratically-owned issues compared to political news networks, they do not do so in comparison to one another. Compared to one another, the traditional news networks are quite fair. Watching any of the traditional news networks will on average give the viewer issues in the same proportion.
+
+Lastly, all networks appear to be very responsive to world events, or at least responsive to events that are related to political issues. When events happen, networks report on them. While networks may aim to be “gatekeepers,” strategically selecting stories to set the agenda, they are heavily restricted in their efforts by daily events. While traditional news networks are less reactive than political news networks, it appears that with all networks, story selection is largely a function of external events rather than an organization’s internal choice. These findings may require a rethinking of the extent to which news outlets act as "gatekeepers."
+
+These findings indicate that media outlets are not engaging in issue ownership bias as much as we might expect, or they might desire to. As issue ownership bias receives less attention than other types of partisan media bias, more research in this area is necessary. One important area of further research includes how coverage of owned issues actually affects the real world. During rare occurrences when networks can be more selective and potentially engage in issue ownership bias, does this affect approval of politicians and parties, does it even affect how elections are determined, and what is the magnitude of this effect? 
+
+Another area of research that is necessary is tone—or how these networks talk about political issues. In this paper, negative and positive reporting on Obamacare were simply measured as the same thing. This is because issue ownership deals with the salience of issues, not whether they are positively or negative received. However, it would be interesting to see the tone of how these owned issues are covered.
+
+While this paper has investigated issue ownership bias in television news, there is still much research needed in this area. However, these initial results paint a picture of a media landscape not as biased as previous research has claimed. While there may be small differences between specific networks, as a whole, the media seem to cover issues quite fairly.
+
+# References
+
+
+
+
+
+
+

@@ -10,3 +10,5 @@
 *.tex
 *.DS_Store
 Articles/
+MPSA_Presentation.Rmd
+MPSA_Presentation.pdf

@@ -469,9 +469,7 @@ df <- df %>%
         "poverty",
         "other"
       )
-    ),
-    network_factor = labelled::to_factor(network),
-    time_slot_factor = labelled::to_factor(time_slot)
+    )
   )
 
 df <- df %>%
@@ -500,14 +498,7 @@ df <- df %>%
       )
     )
   )
-df <- df %>% dplyr::select(-issue_predicted)
-
-var_label(df$network_factor) <- 
-  'network variable as factor instead of labelled integer'
-var_label(df$time_slot_factor) <- 
-  'time_slot variable as factor instead of labelled integer'
-var_label(df$predicted_issue_factor) <- 
-  'predicted_issue variable as factor instead of labelled integer'
+df <- df %>% dplyr::select(-c(issue_predicted, predicted_issue_factor))
 
 # make the unique show a categorical variable
 shows_list <- read_excel('list_of_shows.xlsx',
@@ -553,15 +544,33 @@ df <- df %>%
 var_label(df$total_republican_percentage) <- 
   'percent republican of all consensus issues'
 
+# Create a variable for the day of the week
+df <- df %>%
+  dplyr::mutate(
+    day_of_week = lubridate::wday(date)
+  ) %>%
+  dplyr::mutate(day_of_week = labelled::labelled(
+    as.integer(day_of_week),
+    c(
+      Sunday = 1,
+      Monday = 2,
+      Tuesday = 3,
+      Wednesday = 4,
+      Thrusday = 5,
+      Friday = 6,
+      Saturday = 7
+    )
+  )
+)
+
 df <- df %>%
   dplyr::select(
-    unique_id:network, show, time_slot,
+    unique_id, date, day_of_week, network, show, time_slot,
     total_republican_percentage, republican_percentage,
     domestic_security:other,
     total_republican, total_democrat, total_neutral,
     predicted_issue,
-    israel_palestine:orlando_shooting,
-    network_factor, time_slot_factor, predicted_issue_factor
+    israel_palestine:orlando_shooting
   )
 
 # Save to disk
