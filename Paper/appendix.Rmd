@@ -1,0 +1,113 @@
+---
+output:
+  pdf_document: 
+    keep_tex: true
+---
+```{r, include=F}
+library(tidyverse)
+library(readxl)
+library(knitr)
+library(stringr)
+library(kableExtra)
+library(purrr)
+
+knitr::opts_chunk$set(fig.pos = 'h')
+
+tables_file <- paste0("~/Google Drive/Projects/Dissertation/", 
+                      "Media_Bias_Project/Tables.xlsx")
+
+
+format_numbers <- function(elem) {
+  
+  if (is.na(elem)) {
+    return ('')
+  }
+  if (elem == '-') {
+    return(elem)
+  }
+  elem <- as.numeric(elem)
+  elem <- round(elem, digits = 3)
+  elem <- as.character(elem)
+  
+}
+
+```
+
+# Appendix
+
+### Events with Corresponding Issues Table
+
+```{r, echo=F, message=F, error=F, warning=F, results='asis'}
+df <- read_excel(tables_file, sheet = 'Appendix Events Issues Table', 
+                 col_types = 'text')
+knitr::kable(df, align = 'c', format = 'latex', booktabs = T,
+             longtable = T) %>%
+  kable_styling(latex_options = c("hold_position", "repeat_header",
+                                  'scale_down'))
+```
+
+\ 
+
+### Full Model with Clustered Standard Errors and Fixed Effects
+
+```{r, echo=F, message=F, error=F, warning=F, results='asis'}
+df <- read_excel(tables_file, sheet = 'Appendix Full Models', 
+                 col_types = 'text') %>%
+  dplyr::select(1, 5:7) %>%
+  dplyr::slice(1:12) 
+df$variable[12] <- '_cons'
+
+temp <- df %>%
+  dplyr::select(2:4) %>%
+  map_df(~ str_trim(., 'both')) %>%
+  map_df(~ map_chr(., format_numbers))
+
+df <- df %>%
+  dplyr::select(1) %>%
+  bind_cols(temp)
+
+colnames(df) <- c(' ', 'Coefficient', 'Standard Error', 'P Value')
+knitr::kable(df, align = 'c', format = 'latex', booktabs = T) %>%
+  kable_styling(latex_options = c('hold_position'))
+```
+
+\ 
+
+### Full Model with Clustered Standard Errors
+
+```{r, echo=F, message=F, error=F, warning=F, results='asis'}
+df <- read_excel(tables_file, sheet = 'Appendix Full Models', 
+                 col_types = 'text') %>%
+  dplyr::select(1:4)
+  
+temp <- df %>%
+  dplyr::select(2:4) %>%
+  map_df(~ str_trim(., 'both')) %>%
+  map_df(~ map_chr(., format_numbers))
+
+df <- df %>%
+  dplyr::select(1) %>%
+  bind_cols(temp)
+
+df[is.na(df)] <- ' '
+colnames(df) <- c(' ', 'Coefficient', 'Standard Error', 'P Value')
+knitr::kable(df, align = 'c', format = 'latex', 
+             booktabs = T, longtable = TRUE) %>%
+  kable_styling(latex_options = c("hold_position", "repeat_header"))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,36 @@
+---
+title: "The Media as Ideological “Gatekeepers”? Findings of Minimal Selection Bias in Television News Coverage"
+author: "Robert Bird  -  Stony Brook University"
+date: "04/30/2018"
+output:
+  pdf_document:
+    keep_tex: true
+    include:
+      after_body: appendix.tex
+  html_document:
+    df_print: paged
+  citation_package: biblatex
+link-citations: yes
+fig_caption: yes
+bibliography: bibliography.bib
+header-includes:
+    - \usepackage{setspace}\onehalfspacing
+    - \usepackage{longtable}
+fontsize: 11pt
+---
+
+```{r setup, include=FALSE, message=F}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  error = FALSE,
+  message = FALSE,
+  fig.pos = 'h'
+)
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(ggthemes)
+```
+
+

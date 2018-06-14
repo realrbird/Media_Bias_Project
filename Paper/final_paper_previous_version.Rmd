@@ -123,7 +123,7 @@ Using relative baseline comparisons and adhering to the IBE framework provides m
 
 # Data & Methods
 
-### Data
+### *Data*
 
 To discern whether or not television news outlets are engaging in issue ownership bias, over one million television transcripts via Lexis Nexis were analyzed. This comprises all television transcripts which Lexis Nexis had on file for Fox News, MSNBC, CNN, ABC News, NBC News, and CBS News from January of 2000 to August of 2016. Table \ref{tab:table1} displays the counts and percentages of transcripts for each network. 
 
@@ -219,7 +219,7 @@ Figure \ref{fig:figure1} demonstrates that the model is working correctly. For a
 
 # Results
 
-### Issue Ownership Bias *within* Network Types
+### *Issue Ownership Bias within Network Types*
 
 Figure \ref{fig:figure1} shows that the elastic net model is categorizing transcripts into correct issues. For each transcript, the model calculates the probability of belonging to each consensus issue as well as to the "other" category. If we would like to know the total coverage given to Democratic issues for each network, for example, we can simply sum the probabilities of each of the individual Democratic issues (e.g., health care, the environment, poverty) and then calculate the mean by network. This process can be repeated for the Republican issues, neutral issues, and the "other" category. Table \ref{tab:table3} shows the percentage of each coverage type (Democratically-owned issues, Republican-owned issues, neutral issues, and the "other" issue) for each network.
 
@@ -316,7 +316,7 @@ df %>%
 
 Among traditional news networks, we do not see much difference across models. CBS is more Democratic than ABC in the second model but not the first, and it is more Republican than NBC in the first model with no significant difference in the second model. While NBC is to the left of ABC in both models, ABC shows no statistical difference from CBS in some models, and CBS shows no significant difference from NBC in other models. Taken together, there is no consistent empirical support for the idea that traditional news networks are engaging in issue ownership bias.
 
-### Issue Ownership Bias *betweeen* Network Types
+### *Issue Ownership Bias between Network Types*
 
 As Table \ref{tab:table5} and Figure \ref{fig:figure2} show, all traditional news networks cover more Democratically-owned issues compared to all political news networks. This indicates that traditional news networks lean to the left in terms of their issue coverage compared to political news networks. This result is robust across models, which may initially indicate that traditional news networks are far more Democratic than political news networks. However, this may simply be due to structural differences between network types rather than ideological bias. If this disparity were ideologically driven we would need to believe that ABC, CBS, and NBC are all far more liberal than MSNBC, which is thought to be one of the most liberal leaning news organizations [@levendusky2013partisan; @terwilleger2010bias; @holtzman2011exploring]. In addition, ABC, CBS, and NBC would be ideologically biased to the same extent, as there is almost no difference between them in terms of Republican Percentage.
 
@@ -357,7 +357,7 @@ df %>%
 
 The evidence suggests that the differences in issue coverage between traditional and political news networks is due to differences in format rather than any ideological bias. Taken together with the evidence that within network type there is little difference in issue coverage, it seems that ideological bias is not driving the coverage of specific issues. This is not to say that networks desire to slant the issues they cover, but rather that perhaps external events and structural factors dramatically inhibit their ability to do so.
 
-### News Networks as Ideological Gatekeepers?
+### *News Networks as Ideological Gatekeepers?*
 
 Figures \ref{fig:figure1} and \ref{fig:figure1} support the idea that networks are constrained by structural factors—that as events happen in the world, networks must cover them regardless of their political leanings, leaving little room for ideological slant. For example, MSNBC cannot choose to ignore the Iraq War, even though both domestic security and the military are Republican issues. Similarly, Fox News cannot ignore the BP oil spill or Obamacare, though the environment and health care are Democratic issues. Again, the graph shows that networks are not completely free to set their own agenda—they are constrained by real world events. If networks do have ideological slant and a desire to set the agenda, it seems that their ability to do so is heavily restricted. The arguably most liberal leaning network, MSNBC, devotes almost 80% of its political programming to Republican-owned issues.
 
