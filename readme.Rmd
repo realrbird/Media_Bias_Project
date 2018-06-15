@@ -1,0 +1,37 @@
+---
+title: 'The Media as Ideological “Gatekeepers”? Findings of Minimal Selection Bias in Television News Coverage'
+author: 'Robert Bird   Stony Brook University'
+output: github_document
+---
+
+# Overview
+
+This project is my first dissertation project currently titled *The Media as Ideological “Gatekeepers”? Findings of Minimal Selection Bias in Television News Coverage*. This project aims to understand if television news outlets engage in 'gatekeeping' by disprortionatly covering different issues depending on which political party "owns" that issue (see [Petrocik 1996](http://darp.lse.ac.uk/Frankweb/courses/Ec501/petrocik_issue_ownership.pdf) for more on issue ownership). For example, does Fox News focus more on issues that The Republican Pary owns (Domestic Security, Military, Immigration ...) in order to set the agenda in their favor? Does MSNBC engage in this behavior in favor of issues The Democratic Party owns (Poverty, Energy, Environment ...)?
+
+# How to use project files
+This document explains all the files and how they fit together so that the results can be easily replicated by anyone with the original transcripts. Some of the files are not available in this github repo but are explained anyway as they may be available elsewhere such as my personal website. This project uses the `here` package in R so no code editing such as setting directories is necessary, so long as no files are moved around.
+
+- **Articles/**
+    - This directory contains all of the original transcripts for each network.
+    - These transcripts were downloaded directly from Lexis Nexis and comprise everything Lexis Nexis had on file for January 2000 - August 2016.
+- **convert_articles_to_tibble.R**
+    - This file takes the raw transcripts from the *Articles/* directory and parses the text.
+    - Metadata such as the *network* the transcript came from, *show*, *date* etc is extracted.
+    - Each metadata item is a column in the final transcript along with the body of the transcript which is located in the `transcript_body` variable.
+    - Finally, this file converts all the text data into a tibble which is exported as the `complete_data_with_transcript.rds` file.
+- **run_glmnet_parse_time_show_events.R**
+    - This file does a few things with the `complete_data_with_transcript.rds` tibble.
+    - It takes in training set that has been human coded `supervised_learning_sample.xlsx` and fits an elastic net regression model to the transcripts via the `glmnet` package.
+    - Next it uses this model to predict which issue each transcript belongs to, the transcripts come from the `transcript_body` column of the tibble.
+    - Next it extracts the time the transcript aired from parsing the `show` variable.
+    - Next it creates data for world events and appends them to the dataframe
+    - Next it creates the `complete_data_minus_transcript.rds` file that is all variables except for the orginal transcripts which are no longer needed, and cause performance issues. They are still preserved in the `complete_data_with_transcript.rds` file.
+    - Finally everything is cleaned, labelled etc and only the variables needed for analysis is saved in the `final_data_for_analysis.dta` file.
+- **analysis.R**
+    - This file uses the `final_data_for_analysis.dta` file to do all the analysis presented in the paper as well as create table/figures etc.
+- `list_of_shows.xlsx`, `events_information_table.xlsx` `supervised_learning_sample.xlsx`, `stopwords.R`, and `stopwords.txt` do not need to be accessed directly, they are used by other R code files for processing.
+    - `supervised_learning_sample.xlsx`, `stopwords.R`, and `stopwords.txt` are used to run the supervised learning model via `glmnet`.
+    - `list_of_shows.xlsx` is a list of all shows in the data that is parsed so that there is a column for each unique show
+    - `events_information_table.xlsx` is a list of events their date, the issues associated with each event such as September 11th attack, issue is Domestic Security.
+- **Paper/**
+    - This is a directory that has the files necessary to compile the pdf version of the paper.
