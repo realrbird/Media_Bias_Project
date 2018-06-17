@@ -33,5 +33,7 @@ This document explains all the files and how they fit together so that the resul
     - `supervised_learning_sample.xlsx`, `stopwords.R`, and `stopwords.txt` are used to run the supervised learning model via `glmnet`.
     - `list_of_shows.xlsx` is a list of all shows in the data that is parsed so that there is a column for each unique show
     - `events_information_table.xlsx` is a list of events their date, the issues associated with each event such as September 11th attack, issue is Domestic Security.
+- **analysis.do**
+    - This dofile is where the main regressions and network contrasts are run. These regression tables are then put into excel (`regression_table_and_contrasts.xlsx`) to read into rmarkdown later to create Table 5 and Figure 2 in the paper.
 - **Paper/**
     - This is a directory that has the files necessary to compile the pdf version of the paper.

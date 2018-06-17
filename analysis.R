@@ -3,6 +3,9 @@ library(haven)
 library(labelled)
 library(here)
 library(readxl)
+library(forcats)
+library(ggthemes)
+library(scales)
 
 here::here() %>%
   setwd() 
@@ -235,6 +238,180 @@ write_rds(table_4, 'Table_4_Data.rds')
 # *****************************************************************************
 # Table 5
 # *****************************************************************************
+here::here() %>%
+  setwd()
+table_5 <- read_excel(
+  "regression_table_and_contrasts.xlsx",
+  sheet = 'Table_5_Data_Display',
+  col_types = 'text'
+) %>%
+  dplyr::mutate(
+    variable = ifelse(is.na(variable), '', variable)
+  )
+colnames(table_5) <- c('', colnames(table_5)[2:3])
+
+paste0(getwd(), '/Paper') %>%
+  setwd()
+write_rds(table_5, 'Table_5_Data.rds')
+
+
+# *****************************************************************************
+# Figure 2 Data
+# *****************************************************************************
+here::here() %>%
+  setwd()
+
+figure_2_data <- read_excel(
+  "regression_table_and_contrasts.xlsx",
+  sheet = 'Figure_2_Data',
+  col_types = c(
+    'text',
+    rep('numeric', 4),
+    'text'
+  )
+)
+
+contrast_factor <- parse_factor(
+  figure_2_data$contrast,
+  levels = figure_2_data$contrast[1:15],
+  ordered = T
+)
+figure_2_data <- figure_2_data %>%
+  dplyr::mutate(
+    factor_contrasts = forcats::fct_rev(contrast_factor)
+  )
+
+paste0(getwd(), '/Paper') %>%
+  setwd()
+
+write_rds(figure_2_data, 'Figure_2_Data.rds')
+
+# See colorblind palette
+scales::show_col(colorblind_pal()(8))
+
+figure_2_data %>%
+  ggplot(aes(factor_contrasts, estimate, color = model)) +
+  geom_point(show.legend = F) +
+  geom_linerange(aes(ymin = ll, ymax = ul), show.legend = F) +
+  labs(x = 'Network Contrast', y = "Marginal Effect from Model",
+       title = 'Comparisons of the Effect of Network on Republican Percentage'
+       ) +
+  geom_hline(yintercept = 0, color = 'purple', linetype = 'dashed') +
+  theme_classic() + 
+  theme(plot.title = element_text(hjust = 0.5,
+                                  face = 'bold',
+                                  margin = margin(t = 10, r = 0, 
+                                                  b = 30, l = 0)),
+        axis.title.y = element_text(margin = margin(t = 0, r = 20, 
+                                                    b = 0, l = 10)),
+        axis.title.x = element_text(margin = margin(t = 20, r = 0, 
+                                                    b = 10, l = 0))
+        ) + 
+  facet_wrap(~model, nrow = 1) + 
+  coord_flip() +
+  scale_color_manual(values = c('#009E73', '#D55E00')) +
+  scale_y_continuous(labels = scales::percent_format())
+
+# *****************************************************************************
+# Figure 3 Data
+# *****************************************************************************
+
+# The 'run_model()' function from figure one used 'df' hardcoded in the
+# function we have to do some renaming
+original_df <- df
+
+df <- original_df %>%
+  dplyr::filter(network_type == 'Traditional')
+
+figure_3_data_traditional <- map2(
+  events$issue, events$event_variable, run_model
+) %>%
+  bind_rows() %>%
+  left_join(
+    dplyr::select(
+      events,
+      event,
+      owned_by,
+      term = event_variable),
+    by = 'term'
+  ) %>%
+  dplyr::select(
+    event,
+    estimate,
+    se = std.error,
+    p_value = p.value,
+    ll = ci.lower,
+    ul = ci.upper,
+    dv = outcome,
+    owned_by
+  ) %>%
+  as_tibble() %>%
+  dplyr::mutate(network_type = 'Traditional')
+
+
+df <- original_df %>%
+  dplyr::filter(network_type == 'Political')
+
+figure_3_data_political <- map2(
+  events$issue, events$event_variable, run_model
+) %>%
+  bind_rows() %>%
+  left_join(
+    dplyr::select(
+      events,
+      event,
+      owned_by,
+      term = event_variable),
+    by = 'term'
+  ) %>%
+  dplyr::select(
+    event,
+    estimate,
+    se = std.error,
+    p_value = p.value,
+    ll = ci.lower,
+    ul = ci.upper,
+    dv = outcome,
+    owned_by
+  ) %>%
+  as_tibble() %>%
+  dplyr::mutate(network_type = 'Political')
+
+figure_3_data <- bind_rows(
+  figure_3_data_traditional,
+  figure_3_data_political
+)
+
+write_rds(figure_3_data, 'Figure_3_Data.rds')
+
+
+figure_3_data %>%
+  dplyr::mutate(
+    network_type = paste(network_type, 'Networks')
+  ) %>%
+  ggplot(aes(x = reorder(event, estimate), 
+             y = estimate,
+             color = network_type)) +
+  geom_point(position = position_dodge(.5)) +
+  geom_linerange(aes(ymin = ll, ymax = ul), position = position_dodge(.5)) +
+  ggtitle('Effect of World Events on Related Issue Coverage by Network Type') +
+  labs(x = "Event", y = 'Marginal Effect',
+       caption = " ") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5,
+                                  face = 'bold',
+                                  margin = margin(t = 10, r = 0, 
+                                                  b = 30, l = 0)),
+        axis.title.y = element_text(margin = margin(t = 0, r = 20, 
+                                                    b = 0, l = 10)),
+        axis.title.x = element_text(margin = margin(t = 20, r = 0, 
+                                                    b = 10, l = 0)),
+        legend.position = c(0.8, 0.7),
+        legend.title = element_blank()) +
+  expand_limits() +
+  coord_flip() +
+  scale_colour_colorblind() +
+  scale_y_continuous(labels = scales::percent_format())
 
 
 
